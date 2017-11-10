@@ -137,11 +137,9 @@ func makeFrame(selectedFile, destDir string) {
 	ioutil.WriteFile(f_html, []byte(t), 0777)
 }
 
-
-
 //xlsx to html
 //xlsxFile is xlsx file path
-func XlsxToHtml(xlsxFile string, destDir, htmlFileName string) (bool, error) {
+func XlsxToHtml(xlsxFile string, destDir string) (bool, error) {
 	//read excels
 	xlFile, err := xlsx.OpenFile(xlsxFile)
 	if err != nil {
@@ -152,7 +150,8 @@ func XlsxToHtml(xlsxFile string, destDir, htmlFileName string) (bool, error) {
 	//make template is target
 	rname := gutils.GetFileName(xlsxFile)
 	//create destdir
-	destDir = gutils.Dir(destDir)
+	outDir:=filepath.Join(destDir,rname)
+	gutils.Dir(outDir)
 
 	//make sheet tabs and frameSet html page
 	sf := makeTabs(xlFile.Sheets, rname)
@@ -166,9 +165,7 @@ func XlsxToHtml(xlsxFile string, destDir, htmlFileName string) (bool, error) {
 		calcCells = makeSheet(rname, sheetIndex, sheet, calcCells)
 	}
 
-	dir := RtDir(rname)
-
-	fn := dir + "/conf.json"
+	fn := filepath.Join(destDir,"cells.json")
 	jcs, err := json.Marshal(calcCells)
 	if err != nil {
 		log.Println("make ", rname, " json conf ", err)
@@ -176,6 +173,7 @@ func XlsxToHtml(xlsxFile string, destDir, htmlFileName string) (bool, error) {
 		ioutil.WriteFile(fn, []byte(jcs), 0777)
 	}
 
+	return true,nil
 }
 
 const (

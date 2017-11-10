@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"strconv"
 	"github.com/qjsoftcn/gutils"
-	"os"
 	"encoding/json"
 	"log"
 	"github.com/qjsoftcn/confs"
@@ -31,14 +30,45 @@ const (
 
 	frame_t_path = "xlsx_t/f.t"
 	frame_name   = "index.html"
+
+	head_file_name = "head.html"
 )
 
-var mid_url=confs.GetString("rt","mid","url")
-var bottom_url=confs.GetString("rt","bottom","url")
-var head_url=confs.GetString("rt","bottom","url")
+const (
+	conf_group = "report"
+	rt_dir     = "rtRoot"
+	dot        = "."
+	underline  = "_"
+	sheetShort = "s"
+)
 
-func SetUrl(){
+var dst string = confs.GetString(conf_group, rt_dir)
 
+func getMidUrl(sfilename string) string {
+	mid_url := confs.GetString("rt", "mid", "url")
+	if len(mid_url) == 0 {
+		return sfilename + ".html"
+	} else {
+		return mid_url
+	}
+}
+
+func getHeadUrl() string {
+	head_url := confs.GetString("rt", "head", "url")
+	if len(head_url) == 0 {
+		return head_file_name
+	} else {
+		return head_url
+	}
+}
+
+func getBottomUrl() string {
+	bottom_url := confs.GetString("rt", "bottom", "url")
+	if len(bottom_url) == 0 {
+		return tabs_name
+	} else {
+		return bottom_url
+	}
 }
 
 //make rt tabs
@@ -73,8 +103,8 @@ func makeTabs(sheets []*xlsx.Sheet, destDir string) string {
 
 		st = strings.Replace(st, "${sheetName}", sheet.Name, -1)
 
-		url := "\"" + mid_url + fn + "\""
-		st = strings.Replace(st, "${sheetFile}", url, -1)
+		url := "\"" + getMidUrl(fn) + "\""
+		st = strings.Replace(st, "${mid_url}", url, -1)
 
 		sheetTabs += st + "\n"
 		if sheet.Selected {
@@ -99,36 +129,15 @@ func makeFrame(selectedFile, destDir string) {
 	rs := bytes.Runes(fc)
 	t := string(rs)
 
-	t = strings.Replace(t, "${head_url}", head_url, -1)
-	t = strings.Replace(t, "${mid_url}", mid_url+selectedFile, -1)
-	t = strings.Replace(t, "${bottom_url}", bottom_url, -1)
+	t = strings.Replace(t, "${head_url}", getHeadUrl(), -1)
+	t = strings.Replace(t, "${mid_url}", getMidUrl(selectedFile), -1)
+	t = strings.Replace(t, "${bottom_url}", getBottomUrl(), -1)
 
 	f_html := filepath.Join(destDir, frame_name)
 	ioutil.WriteFile(f_html, []byte(t), 0777)
 }
 
-func RtDir(rname string) string {
-	dir := dst + "/" + rname
-	if gutils.PathExists(dir) {
-		return dir
-	}
-	//mk dir
-	err := os.MkdirAll(dir, 0777)
-	if err != nil {
-		log.Println(err)
-	}
-	return dir
-}
 
-const (
-	conf_group = "report"
-	rt_dir     = "rtRoot"
-	dot        = "."
-	underline  = "_"
-	sheetShort = "s"
-)
-
-var dst string = confs.GetString(conf_group, rt_dir)
 
 //xlsx to html
 //xlsxFile is xlsx file path

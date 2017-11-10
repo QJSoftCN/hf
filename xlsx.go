@@ -11,6 +11,8 @@ import (
 	"os"
 	"encoding/json"
 	"log"
+	"github.com/qjsoftcn/confs"
+	"path/filepath"
 )
 
 const (
@@ -23,36 +25,50 @@ const (
 )
 
 const (
-	tabs_t_path = "rht/tabs.t"
-	tabs_td     = "<td bgcolor=#FFFFFF ${dis} nowrap><b><small><small>&nbsp;<a href=${sheetFile} target=frSheet><font face=宋体 color=#000000>${sheetName}</font></a>&nbsp;</small></small></b></td>"
+	tabs_t_path  = "xlsx_t/tabs.t"
+	tabs_td_path = "xlsx_t/tabs_td.t"
+	tabs_name    = "tabs.html"
+
+	frame_t_path = "xlsx_t/f.t"
+	frame_name   = "index.html"
 )
 
-const (
-	mid_url    = "/report/rt/mid?rId={{.Id}}&sheet="
-	bottom_url = "/report/rt/bottom?rId={{.Id}}"
-	head_url   = "/report/rt/head?rId={{.Id}}"
-)
+var mid_url=confs.GetString("rt","mid","url")
+var bottom_url=confs.GetString("rt","bottom","url")
+var head_url=confs.GetString("rt","bottom","url")
+
+func SetUrl(){
+
+}
 
 //make rt tabs
-func makeTabs(sheets []*xlsx.Sheet, rname string) string {
+func makeTabs(sheets []*xlsx.Sheet, destDir string) string {
 	fc, err := ioutil.ReadFile(tabs_t_path)
 	if err != nil {
 		fmt.Println("read tab template ", err)
 	}
 
+	ftdc, err := ioutil.ReadFile(tabs_td_path)
+	if err != nil {
+		fmt.Println("read tabs td template ", err)
+	}
+
 	rs := bytes.Runes(fc)
 	t := string(rs)
+
+	rs_ftdc := bytes.Runes(ftdc)
+	t_ftdc := string(rs_ftdc)
 
 	sheetTabs := ""
 	selectedFile := "s1"
 	for index, sheet := range sheets {
-		st := tabs_td
+		st := t_ftdc
 		fn := "s" + strconv.Itoa(index+1)
 
 		if sheet.Hidden {
 			st = strings.Replace(st, "${dis}", "style='display:none;'", -1)
 		} else {
-			st = strings.Replace(st, "${dis}", "", -1)
+			st = strings.Replace(st, "${dis}", gutils.EmptyString, -1)
 		}
 
 		st = strings.Replace(st, "${sheetName}", sheet.Name, -1)
@@ -69,15 +85,13 @@ func makeTabs(sheets []*xlsx.Sheet, rname string) string {
 	//替换sheetTabs
 	t = strings.Replace(t, "${sheetTabs}", sheetTabs, -1)
 
-	dir := RtDir(rname)
-	ioutil.WriteFile(dir+"/tabs.html", []byte(t), 0777)
+	tabsPath := filepath.Join(destDir, tabs_name)
+	ioutil.WriteFile(tabsPath, []byte(t), 0777)
 	return selectedFile
 }
 
-const rht_path = "rht/f.t"
-
-func makeFrame(selectedFile, rname string) {
-	fc, err := ioutil.ReadFile(rht_path)
+func makeFrame(selectedFile, destDir string) {
+	fc, err := ioutil.ReadFile(frame_t_path)
 	if err != nil {
 		fmt.Println("read frame ", err)
 	}
@@ -89,8 +103,8 @@ func makeFrame(selectedFile, rname string) {
 	t = strings.Replace(t, "${mid_url}", mid_url+selectedFile, -1)
 	t = strings.Replace(t, "${bottom_url}", bottom_url, -1)
 
-	dir := RtDir(rname)
-	ioutil.WriteFile(dir+"/f.html", []byte(t), 0777)
+	f_html := filepath.Join(destDir, frame_name)
+	ioutil.WriteFile(f_html, []byte(t), 0777)
 }
 
 func RtDir(rname string) string {
@@ -114,7 +128,7 @@ const (
 	sheetShort = "s"
 )
 
-var dst string = gutils.GetString(conf_group, rt_dir)
+var dst string = confs.GetString(conf_group, rt_dir)
 
 //xlsx to html
 //xlsxFile is xlsx file path
@@ -128,6 +142,8 @@ func XlsxToHtml(xlsxFile string, destDir, htmlFileName string) (bool, error) {
 
 	//make template is target
 	rname := gutils.GetFileName(xlsxFile)
+	//create destdir
+	destDir = gutils.Dir(destDir)
 
 	//make sheet tabs and frameSet html page
 	sf := makeTabs(xlFile.Sheets, rname)
